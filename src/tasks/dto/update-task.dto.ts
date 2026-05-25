@@ -9,11 +9,12 @@ import {
   MinLength,
 } from "class-validator";
 
-export class CreateTaskDto {
+export class UpdateTaskDto {
+  @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(120)
-  title!: string;
+  title?: string;
 
   @IsOptional()
   @IsString()
