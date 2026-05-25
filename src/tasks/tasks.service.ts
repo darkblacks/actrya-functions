@@ -66,20 +66,32 @@ export class TasksService {
     };
   }
 
-  async findAllByProject(userId: string, projectId: string) {
-    await this.validateProjectAccess(userId, projectId);
+async findAllByProject(userId: string, projectId: string) {
+  await this.validateProjectAccess(userId, projectId);
 
-    const snapshot = await this.tasksCollection()
-      .where("projectId", "==", projectId)
-      .orderBy("order", "asc")
-      .orderBy("createdAt", "asc")
-      .get();
+  const snapshot = await this.tasksCollection()
+    .where("projectId", "==", projectId)
+    .get();
 
-    return snapshot.docs.map((doc) => ({
+  return snapshot.docs
+    .map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    }));
-  }
+    }))
+    .sort((a: any, b: any) => {
+      const orderA = typeof a.order === "number" ? a.order : 0;
+      const orderB = typeof b.order === "number" ? b.order : 0;
+
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      const dateA = a.createdAt?.toDate?.() ?? new Date(0);
+      const dateB = b.createdAt?.toDate?.() ?? new Date(0);
+
+      return dateA.getTime() - dateB.getTime();
+    });
+}
 
   async findOne(userId: string, taskId: string) {
     const doc = await this.tasksCollection().doc(taskId).get();

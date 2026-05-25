@@ -38,16 +38,22 @@ export class ProjectsService {
   }
 
   async findAll(userId: string) {
-    const snapshot = await this.collection()
-      .where("memberIds", "array-contains", userId)
-      .orderBy("updatedAt", "desc")
-      .get();
+  const snapshot = await this.collection()
+    .where("memberIds", "array-contains", userId)
+    .get();
 
-    return snapshot.docs.map((doc) => ({
+  return snapshot.docs
+    .map((doc) => ({
       id: doc.id,
       ...doc.data(),
-    }));
-  }
+    }))
+    .sort((a: any, b: any) => {
+      const dateA = a.updatedAt?.toDate?.() ?? new Date(0);
+      const dateB = b.updatedAt?.toDate?.() ?? new Date(0);
+
+      return dateB.getTime() - dateA.getTime();
+    });
+}
 
   async findOne(userId: string, projectId: string) {
     const doc = await this.collection().doc(projectId).get();
