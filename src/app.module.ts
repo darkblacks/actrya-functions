@@ -2,10 +2,17 @@ import { Module } from "@nestjs/common";
 import { AuthModule } from "./auth/auth.module";
 import { FirebaseModule } from "./firebase/firebase.module";
 import { HealthModule } from "./health/health.module";
+import { ProjectsModule } from "./projects/projects.module";
 import { UsersModule } from "./users/users.module";
 
 @Module({
-  imports: [FirebaseModule, HealthModule, UsersModule, AuthModule],
+  imports: [
+    FirebaseModule,
+    HealthModule,
+    UsersModule,
+    AuthModule,
+    ProjectsModule,
+  ],
   controllers: [],
   providers: [],
 })
