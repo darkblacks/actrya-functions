@@ -20,7 +20,13 @@ export async function createNestServer(): Promise<Express> {
   );
 
   app.enableCors({
-    origin: true,
+    origin: [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "https://api-gq54nudtcq-rj.a.run.app",
+    ],
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   });
 
