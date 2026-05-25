@@ -3,6 +3,7 @@ import { AuthModule } from "./auth/auth.module";
 import { FirebaseModule } from "./firebase/firebase.module";
 import { HealthModule } from "./health/health.module";
 import { ProjectsModule } from "./projects/projects.module";
+import { TasksModule } from "./tasks/tasks.module";
 import { UsersModule } from "./users/users.module";
 
 @Module({
@@ -12,6 +13,7 @@ import { UsersModule } from "./users/users.module";
     UsersModule,
     AuthModule,
     ProjectsModule,
+    TasksModule,
   ],
   controllers: [],
   providers: [],
