@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsDateString,
   IsIn,
   IsNumber,
@@ -41,4 +42,35 @@ export class UpdateTaskDto {
   @IsNumber()
   @Min(0)
   order?: number;
+
+  @IsOptional()
+  @IsString()
+  kanbanId?: string;
+
+  @IsOptional()
+  @IsString()
+  columnId?: string;
+
+  @IsOptional()
+  @IsString()
+  parentTaskId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  rootTaskId?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  depth?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  dependencyIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  path?: string[];
 }
