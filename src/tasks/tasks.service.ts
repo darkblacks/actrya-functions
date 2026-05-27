@@ -72,44 +72,44 @@ export class TasksService {
   }
 
   private async getProjectDefaultKanban(userId: string, projectId: string) {
-    const project = await this.validateProjectAccess(userId, projectId);
+  const project: any = await this.validateProjectAccess(userId, projectId);
 
-    if (project.defaultKanbanId) {
-      return project.defaultKanbanId as string;
-    }
+  if (project.defaultKanbanId) {
+    return project.defaultKanbanId as string;
+  }
 
-    const snapshot = await this.kanbansCollection()
-      .where("ownerType", "==", "project")
-      .where("ownerId", "==", projectId)
-      .get();
+  const snapshot = await this.kanbansCollection()
+    .where("ownerType", "==", "project")
+    .where("ownerId", "==", projectId)
+    .get();
 
-    const existing = snapshot.docs[0];
+  const existing = snapshot.docs[0];
 
-    if (existing) {
-      await this.projectsCollection().doc(projectId).update({
-        defaultKanbanId: existing.id,
-        updatedAt: new Date(),
-      });
-
-      return existing.id;
-    }
-
-    const { kanban } = await this.kanbansService.createDefaultKanbanForOwner({
-      userId,
-      projectId,
-      ownerType: "project",
-      ownerId: projectId,
-      name: "Kanban principal",
-      minimalColumns: false,
-    });
-
+  if (existing) {
     await this.projectsCollection().doc(projectId).update({
-      defaultKanbanId: kanban.id,
+      defaultKanbanId: existing.id,
       updatedAt: new Date(),
     });
 
-    return kanban.id;
+    return existing.id;
   }
+
+  const { kanban } = await this.kanbansService.createDefaultKanbanForOwner({
+    userId,
+    projectId,
+    ownerType: "project",
+    ownerId: projectId,
+    name: "Kanban principal",
+    minimalColumns: false,
+  });
+
+  await this.projectsCollection().doc(projectId).update({
+    defaultKanbanId: kanban.id,
+    updatedAt: new Date(),
+  });
+
+  return kanban.id;
+}
 
   private statusFromColumn(column: any): TaskStatus {
     if (column?.isFinal) return "done";
@@ -286,12 +286,12 @@ export class TasksService {
       });
   }
 
-  async findChildren(userId: string, taskId: string) {
-    const task = await this.findOne(userId, taskId);
+async findChildren(userId: string, taskId: string) {
+  await this.findOne(userId, taskId);
 
-    const snapshot = await this.tasksCollection()
-      .where("parentTaskId", "==", taskId)
-      .get();
+  const snapshot = await this.tasksCollection()
+    .where("parentTaskId", "==", taskId)
+    .get();
 
     return snapshot.docs
       .map((doc) => ({ id: doc.id, ...doc.data() }))
@@ -396,8 +396,8 @@ export class TasksService {
   }
 
   async move(userId: string, taskId: string, columnId: string) {
-    const task = await this.findOne(userId, taskId);
-    const columnDoc = await this.columnsCollection().doc(columnId).get();
+  const task: any = await this.findOne(userId, taskId);
+  const columnDoc = await this.columnsCollection().doc(columnId).get();
 
     if (!columnDoc.exists) {
       throw new NotFoundException("Coluna não encontrada.");

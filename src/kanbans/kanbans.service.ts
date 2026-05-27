@@ -10,6 +10,13 @@ import { CreateKanbanDto } from "./dto/create-kanban.dto";
 import { UpdateColumnDto } from "./dto/update-column.dto";
 
 type OwnerType = "project" | "task";
+type ColumnType = "backlog" | "production" | "done" | "archived";
+
+type KanbanColumnInput = {
+  name: string;
+  type: ColumnType;
+  order?: number;
+};
 
 @Injectable()
 export class KanbansService {
@@ -77,26 +84,112 @@ export class KanbansService {
     return task.projectId as string;
   }
 
+  private buildProductionColumnKey(name: string, index: number) {
+    const normalizedName = name
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    return normalizedName || `production-${index + 1}`;
+  }
+
+  private normalizeCustomColumns(customColumns: KanbanColumnInput[]) {
+    return customColumns
+      .map((column, index) => {
+        const name = column.name.trim();
+
+        if (!name) {
+          return null;
+        }
+
+        const key =
+          column.type === "production"
+            ? this.buildProductionColumnKey(name, index)
+            : column.type;
+
+        return {
+          name,
+          type: column.type,
+          key,
+          order: column.order ?? index + 1,
+          isInitial: column.type === "backlog",
+          isFinal: column.type === "done" || column.type === "archived",
+        };
+      })
+      .filter((column): column is NonNullable<typeof column> => Boolean(column));
+  }
+
   private async createDefaultColumns(
     projectId: string,
     kanbanId: string,
     now: Date,
-    minimal = false
+    minimal = false,
+    customColumns?: KanbanColumnInput[]
   ) {
-    const defaults = minimal
-      ? [
-          { name: "A fazer", key: "todo", order: 1, isInitial: true, isFinal: false },
-          { name: "Concluído", key: "done", order: 2, isInitial: false, isFinal: true },
-        ]
-      : [
-          { name: "A fazer", key: "todo", order: 1, isInitial: true, isFinal: false },
-          { name: "Fazendo", key: "doing", order: 2, isInitial: false, isFinal: false },
-          { name: "Concluído", key: "done", order: 3, isInitial: false, isFinal: true },
-        ];
+    const defaults = customColumns?.length
+      ? this.normalizeCustomColumns(customColumns)
+      : minimal
+        ? [
+            {
+              name: "A fazer",
+              type: "production" as ColumnType,
+              key: "todo",
+              order: 1,
+              isInitial: true,
+              isFinal: false,
+            },
+            {
+              name: "Concluído",
+              type: "done" as ColumnType,
+              key: "done",
+              order: 2,
+              isInitial: false,
+              isFinal: true,
+            },
+          ]
+        : [
+            {
+              name: "Backlog",
+              type: "backlog" as ColumnType,
+              key: "backlog",
+              order: 1,
+              isInitial: true,
+              isFinal: false,
+            },
+            {
+              name: "A Fazer",
+              type: "production" as ColumnType,
+              key: "todo",
+              order: 2,
+              isInitial: false,
+              isFinal: false,
+            },
+            {
+              name: "Em andamento",
+              type: "production" as ColumnType,
+              key: "doing",
+              order: 3,
+              isInitial: false,
+              isFinal: false,
+            },
+            {
+              name: "Concluído",
+              type: "done" as ColumnType,
+              key: "done",
+              order: 4,
+              isInitial: false,
+              isFinal: true,
+            },
+          ];
 
     const batch = this.firebaseService.firestore.batch();
+
     const createdColumns = defaults.map((column) => {
       const ref = this.columnsCollection().doc();
+
       const data = {
         ...column,
         projectId,
@@ -125,17 +218,21 @@ export class KanbansService {
     ownerId: string;
     name?: string;
     minimalColumns?: boolean;
+    customColumns?: KanbanColumnInput[];
   }) {
     await this.validateProjectAccess(params.userId, params.projectId);
 
     const now = new Date();
+
     const kanbanData = {
       projectId: params.projectId,
       ownerType: params.ownerType,
       ownerId: params.ownerId,
       name:
         params.name ??
-        (params.ownerType === "project" ? "Kanban principal" : "Kanban da tarefa"),
+        (params.ownerType === "project"
+          ? "Kanban principal"
+          : "Kanban da tarefa"),
       description: "",
       isDefault: true,
       createdAt: now,
@@ -143,11 +240,13 @@ export class KanbansService {
     };
 
     const kanbanRef = await this.kanbansCollection().add(kanbanData);
+
     const columns = await this.createDefaultColumns(
       params.projectId,
       kanbanRef.id,
       now,
-      params.minimalColumns ?? params.ownerType === "task"
+      params.minimalColumns ?? params.ownerType === "task",
+      params.customColumns
     );
 
     return {
@@ -167,17 +266,22 @@ export class KanbansService {
     );
 
     if (ownerProjectId !== projectId) {
-      throw new BadRequestException("O dono do Kanban não pertence a este projeto.");
+      throw new BadRequestException(
+        "O dono do Kanban não pertence a este projeto."
+      );
     }
 
     const now = new Date();
+
     const kanbanData = {
       projectId,
       ownerType: dto.ownerType,
       ownerId: dto.ownerId,
       name:
         dto.name?.trim() ??
-        (dto.ownerType === "project" ? "Kanban principal" : "Kanban da tarefa"),
+        (dto.ownerType === "project"
+          ? "Kanban principal"
+          : "Kanban da tarefa"),
       description: dto.description?.trim() ?? "",
       isDefault: false,
       createdAt: now,
@@ -185,6 +289,7 @@ export class KanbansService {
     };
 
     const kanbanRef = await this.kanbansCollection().add(kanbanData);
+
     const columns = await this.createDefaultColumns(
       projectId,
       kanbanRef.id,
@@ -211,6 +316,7 @@ export class KanbansService {
       .sort((a: any, b: any) => {
         const dateA = a.createdAt?.toDate?.() ?? new Date(0);
         const dateB = b.createdAt?.toDate?.() ?? new Date(0);
+
         return dateA.getTime() - dateB.getTime();
       });
   }
@@ -262,12 +368,14 @@ export class KanbansService {
       .sort((a: any, b: any) => {
         const orderA = typeof a.order === "number" ? a.order : 0;
         const orderB = typeof b.order === "number" ? b.order : 0;
+
         return orderA - orderB;
       });
   }
 
   async createColumn(userId: string, kanbanId: string, dto: CreateColumnDto) {
     const columns = await this.findColumns(userId, kanbanId);
+
     const kanbanDoc = await this.kanbansCollection().doc(kanbanId).get();
     const kanban = kanbanDoc.data();
 
@@ -276,6 +384,7 @@ export class KanbansService {
     }
 
     const now = new Date();
+
     const columnData = {
       projectId: kanban.projectId,
       kanbanId,
@@ -298,6 +407,7 @@ export class KanbansService {
 
   async updateColumn(userId: string, columnId: string, dto: UpdateColumnDto) {
     const columnRef = this.columnsCollection().doc(columnId);
+
     const columnDoc = await columnRef.get();
 
     if (!columnDoc.exists) {
