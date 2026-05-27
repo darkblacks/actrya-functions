@@ -1,4 +1,28 @@
-import { IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import {
+  IsArray,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateNested,
+} from "class-validator";
+import { Type } from "class-transformer";
+
+export class CreateProjectKanbanColumnDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  name!: string;
+
+  @IsIn(["backlog", "production", "done", "archived"])
+  type!: "backlog" | "production" | "done" | "archived";
+
+  @IsOptional()
+  @IsNumber()
+  order?: number;
+}
 
 export class CreateProjectDto {
   @IsString()
@@ -18,4 +42,10 @@ export class CreateProjectDto {
   @IsOptional()
   @IsIn(["active", "paused", "completed", "archived"])
   status?: "active" | "paused" | "completed" | "archived";
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateProjectKanbanColumnDto)
+  kanbanColumns?: CreateProjectKanbanColumnDto[];
 }
