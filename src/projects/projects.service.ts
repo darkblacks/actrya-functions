@@ -43,6 +43,7 @@ export class ProjectsService {
       ownerId: docRef.id,
       name: "Kanban principal",
       minimalColumns: false,
+      customColumns: dto.kanbanColumns,
     });
 
     await docRef.update({
@@ -79,13 +80,13 @@ export class ProjectsService {
     const doc = await this.collection().doc(projectId).get();
 
     if (!doc.exists) {
-      throw new NotFoundException("Projeto não encontrado.");
+      throw new NotFoundException("Projeto nao encontrado.");
     }
 
     const project = doc.data();
 
     if (!project?.memberIds?.includes(userId)) {
-      throw new ForbiddenException("Você não tem acesso a este projeto.");
+      throw new ForbiddenException("Voce nao tem acesso a este projeto.");
     }
 
     return {
@@ -99,7 +100,7 @@ export class ProjectsService {
     const doc = await docRef.get();
 
     if (!doc.exists) {
-      throw new NotFoundException("Projeto não encontrado.");
+      throw new NotFoundException("Projeto nao encontrado.");
     }
 
     const project = doc.data();
@@ -129,7 +130,7 @@ export class ProjectsService {
     const doc = await docRef.get();
 
     if (!doc.exists) {
-      throw new NotFoundException("Projeto não encontrado.");
+      throw new NotFoundException("Projeto nao encontrado.");
     }
 
     const project = doc.data();
