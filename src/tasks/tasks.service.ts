@@ -72,7 +72,11 @@ export class TasksService {
   }
 
   private async getProjectDefaultKanban(userId: string, projectId: string) {
+<<<<<<< HEAD
   const project: any = await this.validateProjectAccess(userId, projectId);
+=======
+    const project: any = await this.validateProjectAccess(userId, projectId);
+>>>>>>> afbccb434479ac06023bdbba0409929451a7562c
 
   if (project.defaultKanbanId) {
     return project.defaultKanbanId as string;
@@ -124,8 +128,8 @@ export class TasksService {
 
     const now = new Date();
     let parentTask: any | null = null;
-    let kanbanId = dto.kanbanId;
-    let columnId = dto.columnId;
+    let kanbanId: string | undefined = dto.kanbanId;
+    let columnId: string | undefined = dto.columnId;
     let depth = dto.depth ?? 0;
     let rootTaskId = dto.rootTaskId ?? null;
     let path = dto.path ?? [];
@@ -151,12 +155,14 @@ export class TasksService {
       path = [...(parentTask.path ?? []), parentTask.id];
 
       if (!kanbanId) {
-        let kanbanSnapshot = await this.kanbansCollection()
+        const kanbanSnapshot = await this.kanbansCollection()
           .where("ownerType", "==", "task")
           .where("ownerId", "==", parentTask.id)
           .get();
 
-        if (kanbanSnapshot.empty) {
+        const existingTaskKanban = kanbanSnapshot.docs[0];
+
+        if (!existingTaskKanban) {
           const created = await this.kanbansService.createDefaultKanbanForOwner({
             userId,
             projectId,
@@ -168,7 +174,7 @@ export class TasksService {
 
           kanbanId = created.kanban.id;
         } else {
-          kanbanId = kanbanSnapshot.docs[0].id;
+          kanbanId = existingTaskKanban.id;
         }
       }
     }
@@ -177,7 +183,12 @@ export class TasksService {
       kanbanId = await this.getProjectDefaultKanban(userId, projectId);
     }
 
-    const firstColumn = await this.getFirstColumnForKanban(kanbanId);
+    if (!kanbanId) {
+      throw new BadRequestException("Não foi possível determinar o Kanban da tarefa.");
+    }
+
+    const resolvedKanbanId: string = kanbanId;
+    const firstColumn = await this.getFirstColumnForKanban(resolvedKanbanId);
 
     if (!columnId) {
       if (!firstColumn) {
@@ -187,12 +198,17 @@ export class TasksService {
       columnId = firstColumn.id;
     }
 
+    if (!columnId) {
+      throw new BadRequestException("Não foi possível determinar a coluna da tarefa.");
+    }
+
+    const resolvedColumnId: string = columnId;
     const status = dto.status ?? this.statusFromColumn(firstColumn);
 
     const taskData = {
       projectId,
-      kanbanId,
-      columnId,
+      kanbanId: resolvedKanbanId,
+      columnId: resolvedColumnId,
       title: dto.title.trim(),
       description: dto.description?.trim() ?? "",
       status,
@@ -286,8 +302,13 @@ export class TasksService {
       });
   }
 
+<<<<<<< HEAD
 async findChildren(userId: string, taskId: string) {
   await this.findOne(userId, taskId);
+=======
+  async findChildren(userId: string, taskId: string) {
+    await this.findOne(userId, taskId);
+>>>>>>> afbccb434479ac06023bdbba0409929451a7562c
 
   const snapshot = await this.tasksCollection()
     .where("parentTaskId", "==", taskId)
@@ -396,8 +417,13 @@ async findChildren(userId: string, taskId: string) {
   }
 
   async move(userId: string, taskId: string, columnId: string) {
+<<<<<<< HEAD
   const task: any = await this.findOne(userId, taskId);
   const columnDoc = await this.columnsCollection().doc(columnId).get();
+=======
+    const task: any = await this.findOne(userId, taskId);
+    const columnDoc = await this.columnsCollection().doc(columnId).get();
+>>>>>>> afbccb434479ac06023bdbba0409929451a7562c
 
     if (!columnDoc.exists) {
       throw new NotFoundException("Coluna não encontrada.");
